@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import './AddProduct.css'
 import upload_area from '../../assets/upload_area.svg'
+import { getApiUrl } from '../../config'
 
 const AddProduct = () => {
     const [image,setImage]=useState(false);
@@ -24,12 +25,10 @@ const AddProduct = () => {
     const Add_Product=async ()=>{
         console.log(productDetails);
         let responseData;
-        let product=productDetails;
-
         let formData=new FormData();
         formData.append('image',image);
 
-        await fetch('http://localhost:4000/upload',{
+        await fetch(getApiUrl('/upload'),{
             method:'POST',
             headers:{
                 Accept:'application/json',
@@ -39,15 +38,13 @@ const AddProduct = () => {
 
         if(responseData.success)
         {
-            product.image=responseData.image_url;
-            console.log(product);
-            await fetch('http://localhost:4000/addproduct',{
+            await fetch(getApiUrl('/addproduct'),{
                 method:'POST',
                 headers:{
                     Accept:'application/json',
                     'Content-Type':'application/json',
                 },
-                body:JSON.stringify(product),
+                body:JSON.stringify({ ...productDetails, image: responseData.image_url }),
             }).then((resp)=>resp.json()).then((data)=>{
                 data.success?alert("Product Added"):alert("Failed")
             })

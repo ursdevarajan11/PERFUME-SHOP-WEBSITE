@@ -1,4 +1,20 @@
-const port = 4000;
+const port = process.env.PORT || 4000;
+const mongoUri =
+  process.env.MONGODB_URI ||
+  (process.env.NODE_ENV === "production" ? "" : "mongodb://127.0.0.1:27017/perfumeshop");
+const crypto = require("crypto");
+const jwtSecret =
+  process.env.JWT_SECRET ||
+  (process.env.NODE_ENV === "production" ? "" : crypto.randomBytes(32).toString("hex"));
+
+if (!mongoUri) {
+  throw new Error("MONGODB_URI must be set in production.");
+}
+
+if (!jwtSecret) {
+  throw new Error("JWT_SECRET must be set in production.");
+}
+
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
@@ -12,7 +28,7 @@ app.use(cors());
 
 //database connected  with mongodb
 
-mongoose.connect("mongodb://127.0.0.1:27017/perfumeshop")
+mongoose.connect(mongoUri)
 .then(() => {
   console.log("MongoDB Connected ✅");
 })
@@ -41,9 +57,10 @@ const upload = multer({ storage: storage });
 
 // API for uploading image
 app.post("/upload", upload.single("image"), (req, res) => {
+  const apiUrl = process.env.API_URL || `${req.protocol}://${req.get("host")}`;
   res.json({
     success: true,
-    image_url: `http://localhost:4000/images/${req.file.filename}`,
+    image_url: `${apiUrl.replace(/\/$/, "")}/images/${req.file.filename}`,
   });
 });
 
@@ -181,7 +198,7 @@ app.post("/signup", async (req, res) => {
     }
   };
 
-  const token = jwt.sign(data, "secret_ecom");
+  const token = jwt.sign(data, jwtSecret);
   res.json({ success: true, token })
 });
 
@@ -197,7 +214,7 @@ app.post('/login',async(req,res)=>{
           id:user.id
         }
       }
-      const token=jwt.sign(data,'secret_ecom');
+      const token=jwt.sign(data,jwtSecret);
       res.json({success:true,token});
     }
     else{
@@ -238,7 +255,7 @@ app.get('/popularinwomen',async(req,res)=>{
       }
       else{
         try {
-          const data=jwt.verify(token,'secret_ecom');
+          const data=jwt.verify(token,jwtSecret);
           req.user=data.user;
           next();
         } catch (error) {

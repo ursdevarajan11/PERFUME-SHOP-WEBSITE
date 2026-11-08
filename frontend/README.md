@@ -68,3 +68,11 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+## Netlify deployment
+
+The repository-root `netlify.toml` builds this storefront from `frontend` and publishes `frontend/build`. The `public/_redirects` rule sends direct route requests to the React app, so keep `BrowserRouter` routes refreshable on Netlify.
+
+Set `REACT_APP_API_URL` in the Netlify site environment variables to the public URL of the separately deployed Express backend (without a trailing slash), then redeploy. The backend host must provide `MONGODB_URI`, `JWT_SECRET`, and `API_URL` (its public base URL); it listens on the host-provided `PORT`. Do not put database credentials or signing secrets in frontend variables.
+
+The separate admin app uses Vite and reads its backend URL from `VITE_API_URL` when built. For local development, both apps continue to use `http://localhost:4000` if their respective environment variable is unset.
