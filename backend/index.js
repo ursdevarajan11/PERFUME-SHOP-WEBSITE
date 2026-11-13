@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ quiet: true });
 
 const crypto = require("crypto");
 const fs = require("fs");
@@ -14,9 +14,10 @@ const mongoose = require("mongoose");
 const multer = require("multer");
 
 const isProduction = process.env.NODE_ENV === "production";
-const port = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 const mongoUri =
   process.env.MONGODB_URI ||
+  process.env.MONGO_URI ||
   (isProduction ? "" : "mongodb://127.0.0.1:27017/perfumeshop");
 const jwtSecret =
   process.env.JWT_SECRET ||
@@ -31,6 +32,7 @@ const configuredOrigins = [
   "http://localhost:3000",
   "http://localhost:5173",
   process.env.FRONTEND_URL,
+  process.env.CORS_ORIGIN,
   ...(process.env.CORS_ORIGINS || "").split(","),
 ]
   .filter(Boolean)
@@ -39,7 +41,9 @@ const allowedOrigins = new Set(
   configuredOrigins,
 );
 const allowAnyOrigin =
-  isProduction && !process.env.FRONTEND_URL && !process.env.CORS_ORIGINS;
+  !process.env.FRONTEND_URL &&
+  !process.env.CORS_ORIGIN &&
+  !process.env.CORS_ORIGINS;
 const isAllowedOrigin = (origin) =>
   Boolean(origin) &&
   (allowAnyOrigin || allowedOrigins.has(origin.trim().replace(/\/$/, "")));
@@ -61,12 +65,14 @@ const clearAuthCookieOptions = {
   path: authCookieOptions.path,
 };
 
-if (!mongoUri) throw new Error("MONGODB_URI must be configured in production.");
+if (!mongoUri) {
+  throw new Error("Set MONGODB_URI or MONGO_URI in the production environment.");
+}
 if (!jwtSecret || jwtSecret.length < 32) {
   throw new Error("Set JWT_SECRET to a random value of at least 32 characters.");
 }
 if (isProduction && adminEmails.size === 0) {
-  throw new Error("Set ADMIN_EMAILS to at least one authorized admin email in production.");
+  console.warn("ADMIN_EMAILS is not set; admin-only operations are disabled.");
 }
 
 fs.mkdirSync(uploadDirectory, { recursive: true });
@@ -382,7 +388,7 @@ if (require.main === module) {
     .connect(mongoUri)
     .then(() => {
       console.log("MongoDB connected.");
-      app.listen(port, "0.0.0.0", () => console.log(`API listening on port ${port}.`));
+      app.listen(PORT, "0.0.0.0", () => console.log(`API listening on port ${PORT}.`));
     })
     .catch((error) => {
       console.error("Unable to connect to MongoDB:", error.message);
