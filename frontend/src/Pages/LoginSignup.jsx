@@ -15,44 +15,41 @@ const LoginSignup = () => {
   }
 
   const login=async ()=>{
-    console.log("Login Function Executed",formData);
-    let responseData;
-    await fetch(getApiUrl('/login'),{
-      method:'POST',
-      headers:{
-        Accept:'application/form-data',
-        'Content-Type':'application/json',
-      },
-      body:JSON.stringify(formData),
-    }).then((response)=>response.json()).then((data)=>responseData=data)
-
-    if(responseData.success){
-      localStorage.setItem('auth-token',responseData.token);
-      window.location.replace("/");
+    try {
+      const response = await fetch(getApiUrl('/login'),{
+        method:'POST',
+        credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(formData),
+      });
+      const responseData = await response.json();
+      if(response.ok && responseData.success){
+        window.location.replace("/");
+      } else {
+        alert(responseData.errors || "Login failed.");
+      }
+    } catch (error) {
+      console.error("Login request failed:", error);
+      alert("Unable to reach the server. Please try again.");
     }
-    else{
-      alert(responseData.errors);
-    }
-
   }
   const signup=async ()=>{
-    console.log("Sign Up Function Executed",formData);
-    let responseData;
-    await fetch(getApiUrl('/signup'),{
-      method:'POST',
-      headers:{
-        Accept:'application/form-data',
-        'Content-Type':'application/json',
-      },
-      body:JSON.stringify(formData),
-    }).then((response)=>response.json()).then((data)=>responseData=data)
-
-    if(responseData.success){
-      localStorage.setItem('auth-token',responseData.token);
-      window.location.replace("/");
-    }
-    else{
-      alert(responseData.errors);
+    try {
+      const response = await fetch(getApiUrl('/signup'),{
+        method:'POST',
+        credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(formData),
+      });
+      const responseData = await response.json();
+      if(response.ok && responseData.success){
+        window.location.replace("/");
+      } else {
+        alert(responseData.errors || "Registration failed.");
+      }
+    } catch (error) {
+      console.error("Registration request failed:", error);
+      alert("Unable to reach the server. Please try again.");
     }
   }
 

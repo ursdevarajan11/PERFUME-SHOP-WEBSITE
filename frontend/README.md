@@ -69,10 +69,39 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
 
-## Netlify deployment
+## Production deployment
 
-The repository-root `netlify.toml` builds this storefront from `frontend` and publishes `frontend/build`. The `public/_redirects` rule sends direct route requests to the React app, so keep `BrowserRouter` routes refreshable on Netlify.
+This repository's customer storefront is Create React App, not Vite. Its build output is `frontend/build`; the separate admin app is Vite and outputs `admin/dist`. The repository-root `netlify.toml` builds and publishes the storefront. `public/_redirects` preserves React Router routes on refresh.
 
-Set `REACT_APP_API_URL` in the Netlify site environment variables to the public URL of the separately deployed Express backend (without a trailing slash), then redeploy. The backend host must provide `MONGODB_URI`, `JWT_SECRET`, and `API_URL` (its public base URL); it listens on the host-provided `PORT`. Do not put database credentials or signing secrets in frontend variables.
+### Render backend
 
-The separate admin app uses Vite and reads its backend URL from `VITE_API_URL` when built. For local development, both apps continue to use `http://localhost:4000` if their respective environment variable is unset.
+Create a Web Service from this repository with **Root Directory** `backend`, **Build Command** `npm install`, and **Start Command** `npm start`. Configure:
+
+- `NODE_ENV=production`
+- `MONGODB_URI` — MongoDB Atlas connection string for the `perfumeshop` database
+- `JWT_SECRET` — a random secret of at least 32 characters
+- `CORS_ORIGINS` — comma-separated exact origins for the storefront and admin sites, without trailing slashes
+- `ADMIN_EMAILS` — comma-separated email addresses allowed to administer products
+- `API_URL` — public Render service URL, used when constructing uploaded-image URLs
+- `UPLOAD_DIR` — persistent Render disk mount path for uploaded product images
+- `PORT` is supplied by Render; do not set it to a fixed value
+
+Attach persistent storage for `UPLOAD_DIR` if product uploads must survive service restarts/redeploys. Without it, uploaded images on Render's ephemeral filesystem can disappear.
+
+Create each administrator account before enabling its address in normal storefront registration: configure `MONGODB_URI` and `ADMIN_EMAILS` locally, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` temporarily in the backend environment, and run `npm run create-admin` from `backend`. Use a unique password of at least 12 characters; the script stores only a bcrypt hash and refuses to overwrite an existing account. Remove `ADMIN_PASSWORD` after provisioning.
+
+### MongoDB Atlas
+
+Create a database user with only the required read/write access to the shop database. Add the backend host's outbound IP addresses to Atlas Network Access (use a static outbound IP if available); avoid opening access broadly where possible. Put the URI only in Render's `MONGODB_URI` environment variable, URL-encode special characters in credentials, and never commit it.
+
+### Netlify frontend
+
+Connect the repository to Netlify and use the repository's `netlify.toml` settings: base directory `frontend`, build command `npm run build`, publish directory `build`. Set `REACT_APP_API_URL` to the public Render URL, without a trailing slash. This CRA variable is intentionally not named `VITE_API_BASE_URL`; that Vite convention applies only to the separate admin app. For the admin site, configure base directory `admin`, build command `npm run build`, publish directory `dist`, and `VITE_API_BASE_URL` to the same Render URL. Include both Netlify origins in backend `CORS_ORIGINS`.
+
+The backend uses HttpOnly, Secure, SameSite=None cookies in production. Browsers may block cross-site cookies between unrelated Netlify and Render domains; use custom frontend/API domains under the same registrable domain if the target browsers reject them.
+
+### Existing feature scope
+
+Product search and category filtering run in the storefront against the loaded product catalog. The backend currently has no order, checkout, or payment API; no order functionality is claimed or configured here. Configure the local examples by copying `backend/.env.example` to `backend/.env`, `frontend/.env.example` to `frontend/.env`, and `admin/.env.example` to `admin/.env`, then replace placeholders locally. These `.env` files are ignored by Git.
+
+Run backend smoke tests from `backend` with `npm test`; run the storefront build from `frontend` with `npm run build`.

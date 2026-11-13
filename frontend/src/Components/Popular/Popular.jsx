@@ -9,8 +9,12 @@ const Popular = () => {
     const [popularProducts,setPopularProducts]=useState([]);
     useEffect(()=>{
         fetch(getApiUrl('/popularinwomen'))
-        .then((response)=>response.json())
-        .then((data)=>setPopularProducts(data));
+        .then((response)=>{
+            if (!response.ok) throw new Error(`Popular products request failed (${response.status}).`);
+            return response.json();
+        })
+        .then((data)=>setPopularProducts(data))
+        .catch((error)=>console.error("Could not load popular products:", error));
 
     },[])
     return (

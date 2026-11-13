@@ -1,9 +1,11 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import './NewCollections.css'
-import new_collection from '../Assets/new_collections'
 import Item from '../Item/Item'
+import { ShopContext } from '../../Context/ShopContext'
 
 const NewCollections = () => {
+    const { all_product } = useContext(ShopContext);
+    const new_collection = [...all_product].sort((a, b) => b.id - a.id).slice(0, 8);
     return (
         <div className='new-collections'>
             <h1>NEW COLLECTIONS</h1>

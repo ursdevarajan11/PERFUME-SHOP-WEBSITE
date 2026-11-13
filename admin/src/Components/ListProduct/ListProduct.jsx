@@ -5,25 +5,43 @@ import { getApiUrl } from '../../config'
 
 const ListProduct = () => {
     const [allproducts,setAllProducts]=useState([]);
+    const [error,setError]=useState("");
 
     const fetchInfo=async()=>{
-        await fetch(getApiUrl('/allproducts')).then((res)=>res.json().then((data)=>{setAllProducts(data)}));
+        const response = await fetch(getApiUrl('/allproducts'), { credentials: 'include' });
+        if (!response.ok) throw new Error(`Product request failed (${response.status}).`);
+        setAllProducts(await response.json());
     }
 
     useEffect(()=>{
-        fetchInfo();
+        fetch(getApiUrl('/allproducts'), { credentials: 'include' })
+            .then((response) => {
+                if (!response.ok) throw new Error(`Product request failed (${response.status}).`);
+                return response.json();
+            })
+            .then(setAllProducts)
+            .catch((error) => console.error('Could not load products:', error));
     },[])
 
     const remove_product=async (id)=>{
-        await fetch(getApiUrl('/removeproduct'),{
-            method:'POST',
-            headers:{
-                Accept:'application/json',
-                'Content-Type':'application/json',
-            },
-            body:JSON.stringify({id:id})
-        })
-        await fetchInfo();
+        setError("");
+        try {
+            const response = await fetch(getApiUrl('/removeproduct'),{
+                method:'POST',
+                credentials:'include',
+                headers:{
+                    Accept:'application/json',
+                    'Content-Type':'application/json',
+                },
+                body:JSON.stringify({id:id})
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.errors || `Product removal failed (${response.status}).`);
+            await fetchInfo();
+        } catch (requestError) {
+            console.error('Could not remove product:', requestError);
+            setError(requestError.message || 'Could not remove the product.');
+        }
     }
 
 
@@ -32,6 +50,7 @@ const ListProduct = () => {
     return (
         <div className='list-product'>
             <h1>All Products List</h1>
+            {error && <p role="alert">{error}</p>}
             <div className="listproduct-format-main">
                 <p>Products</p>
                 <p>Title</p>

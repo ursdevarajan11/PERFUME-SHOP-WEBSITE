@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import "./Navbar.css";
 import logo from "../Assets/logo.png";
 import cart_icon from "../Assets/cart_icon.png";
@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { ShopContext } from "../../Context/ShopContext";
 import nav_dropdown from "../Assets/nav_dropdown.png";
 import { useNavigate } from 'react-router-dom';
+import { getApiUrl } from "../../config";
 
 const Navbar = () => {
   const [menu, setMenu] = useState("shop");
@@ -18,6 +19,28 @@ const Navbar = () => {
 
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [authenticated, setAuthenticated] = useState(false);
+
+  useEffect(() => {
+    fetch(getApiUrl("/auth/status"), { credentials: "include" })
+      .then((response) => {
+        if (response.ok) setAuthenticated(true);
+      })
+      .catch((error) => console.error("Could not check login status:", error));
+  }, []);
+
+  const logout = async () => {
+    try {
+      const response = await fetch(getApiUrl("/logout"), {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error(`Logout failed (${response.status}).`);
+      window.location.replace("/");
+    } catch (error) {
+      console.error("Logout request failed:", error);
+    }
+  };
   const handleSearch = () => {
     if(search.trim() !== ""){
          navigate(`/search?query=${search}`);
@@ -95,13 +118,8 @@ const Navbar = () => {
       </div>
       
       <div className="nav-login-cart">
-        {localStorage.getItem("auth-token") ? (
-          <button
-            onClick={() => {
-              localStorage.removeItem("auth-token");
-              window.location.replace("/");
-            }}
-          >
+        {authenticated ? (
+          <button onClick={logout}>
             Logout
           </button>
         ) : (

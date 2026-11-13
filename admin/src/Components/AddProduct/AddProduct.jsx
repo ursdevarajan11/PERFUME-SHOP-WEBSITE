@@ -5,6 +5,7 @@ import { getApiUrl } from '../../config'
 
 const AddProduct = () => {
     const [image,setImage]=useState(false);
+    const [error,setError]=useState("");
     const [productDetails,setProductDetals]=useState({
         name:"",
         image:"",
@@ -23,33 +24,43 @@ const AddProduct = () => {
     }
 
     const Add_Product=async ()=>{
-        console.log(productDetails);
-        let responseData;
-        let formData=new FormData();
-        formData.append('image',image);
-
-        await fetch(getApiUrl('/upload'),{
-            method:'POST',
-            headers:{
-                Accept:'application/json',
-            },
-            body:formData,
-        }).then((resp)=>resp.json()).then((data)=>{responseData=data})
-
-        if(responseData.success)
-        {
-            await fetch(getApiUrl('/addproduct'),{
-                method:'POST',
-                headers:{
-                    Accept:'application/json',
-                    'Content-Type':'application/json',
-                },
-                body:JSON.stringify({ ...productDetails, image: responseData.image_url }),
-            }).then((resp)=>resp.json()).then((data)=>{
-                data.success?alert("Product Added"):alert("Failed")
-            })
+        setError("");
+        if (!image) {
+            setError("Choose a product image before adding the product.");
+            return;
         }
-        
+        try {
+            const formData=new FormData();
+            formData.append('image',image);
+            const uploadResponse = await fetch(getApiUrl('/upload'),{
+                method:'POST',
+                credentials:'include',
+                body:formData,
+            });
+            const responseData = await uploadResponse.json();
+            if (!uploadResponse.ok) {
+                throw new Error(responseData.errors || `Image upload failed (${uploadResponse.status}).`);
+            }
+            if(responseData.success) {
+                const addResponse = await fetch(getApiUrl('/addproduct'),{
+                    method:'POST',
+                    credentials:'include',
+                    headers:{
+                        Accept:'application/json',
+                        'Content-Type':'application/json',
+                    },
+                    body:JSON.stringify({ ...productDetails, image: responseData.image_url }),
+                });
+                const data = await addResponse.json();
+                if (!addResponse.ok || !data.success) {
+                    throw new Error(data.errors || `Product creation failed (${addResponse.status}).`);
+                }
+                alert("Product Added");
+            }
+        } catch (requestError) {
+            console.error("Could not add product:", requestError);
+            setError(requestError.message || "Could not add the product.");
+        }
     }
     return (
         <div className='add-product'>
@@ -83,6 +94,7 @@ const AddProduct = () => {
                  <input onChange={imageHandler} type="file" name='image' id='file-input' hidden />
             </div>
             <button onClick={()=>Add_Product()} className='addproduct-btn'>ADD</button>
+            {error && <p role="alert">{error}</p>}
         </div>
     )
 }
